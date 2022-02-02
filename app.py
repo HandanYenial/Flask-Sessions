@@ -1,4 +1,4 @@
-from flask import Flask,request,render_template,redirect,flash
+from flask import Flask,request,render_template,redirect,flash,session
 from surveys import satisfaction_survey # as survey 
 #as is to rename. Since writing satisfaction_survey is long, we write down survey. it could be anything.
 
@@ -6,6 +6,11 @@ from flask_debugtoolbar import DebugToolbarExtension
 
 #RESPONSES_KEY = "responses"
 responses=[]
+#Storing answers in a list on the server has some problems. 
+#The biggest one is that there’s only one list – if two people try to answer
+#the survey at the same time, they’ll be stepping on each others’ toes!
+#A better approach is to use the session to store response information, 
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "oh-so-secret"
@@ -23,7 +28,9 @@ debug = DebugToolbarExtension(app)
 @app.route('/')
 def show_survey_title():
     return render_template("start-page.html", satisfaction_survey=satisfaction_survey)
-    
+    session["responses"] = []
+    #To begin, modify your start page so that clicking on the button fires off a POST
+    #request to a new route that will set session[“responses”] to an empty list.
 # The button should serve as a link that directs the user to /questions/0 
 # (the next step will define that route).
   
@@ -34,12 +41,21 @@ def show_question():
 #When the user arrives at one of these pages, it should show a form asking the 
 # current question, and listing the choices as radio buttons.
 # Answering the question should fire off a POST request to /answer with the 
-# answer the user selected (we’ll handle this route next).
+# answer the user selected
 
 @app.route("/answer", methods=["POST"])
 def get_answer():
     choice=request.form['answer'] #get the response choice  
+    responses=session["responses"]
     responses.append(choice)
+    session["responses"] = responses
+    #When it comes time to modify the session, watch out.
+    #Normally, you can append to a list like this:fruits.append("cherry")
+    #However, for a list stored in the session, you’ll need to rebind the name in the session, like so:
+    #fruits = session['fruits']
+    #fruits.append("cherry")
+    #session['fruits'] = fruits
+    
     len(responses) != 0 #if it doesn't have this then when clicked to start, it redirects to completion page.
     if (len(responses) == len(satisfaction_survey.questions)):
             # They've answered all the questions! Thank them.
